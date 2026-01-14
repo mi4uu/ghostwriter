@@ -23,3 +23,21 @@ BOOK_TITLE="Things I’d like to tell my cat when I’m at work"
 # for example cat_notebook_cover_Amethyst.pdf or cat_notebook_cover_AQUA-SKY.pdf 
 # extract file name and color
 BOOK_CONTENT="Notes_content_6x9.pdf"
+BOOK_DESCRIPTON="""
+The Perfect Notebook for When You’d Rather Be Scooping the Litter Box Than Sitting in a Meeting.
+
+Let’s be honest: The hardest part of the workday isn't the commute, the deadlines, or the endless emails. It’s saying goodbye to your cat.
+
+"Things I Wish I Could Say To My Cat When I'm At Work" is the ultimate lined journal for the devoted cat parent who spends 9 to 5 dreaming of toe beans, purrs, and head boops. whether you are stuck in a Zoom call or buried in spreadsheets, this notebook is your safe space to jot down notes, tasks, or just letters to your feline overlord.
+
+This notebook is perfect for:
+
+The "Crazy" Cat Person: You know who you are.
+
+Office Venting: Write down all the things your cat understands but your boss doesn't.
+
+Lists & Notes: Use it for meeting notes, grocery lists (cat food, treats, more cat food), or daily journaling.
+
+The Ultimate Gift: A hilarious Secret Santa, White Elephant, or birthday gift for coworkers and friends.
+"""
+BOOK_SUBTITLE="lines, color vesion: "+COLOR
