@@ -1,0 +1,10 @@
+[project]
+name = "ghostwriter"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fpdf>=1.7.2",
+    "pillow>=12.1.0",
+]
