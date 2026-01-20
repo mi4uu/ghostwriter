@@ -6,8 +6,8 @@ ID_AUTHOR_Last_NAME="data-print-book-primary-author-last-name"
 ID_LOW_CONTENT="data-view-is-lcb"
 ID_KEYWORDS_PREFIX="data-print-book-keywords-" # data-print-book-keywords-0 ... 6
 ID_CHOOSE_CATEGORIES_BTN="categories-modal-button"
-
-
+ID_COPYRIGHTS="data-print-book-is-public-domain"
+ID_IS_ADULTONLY="data-print-book-is-adult-content-hidden"
 # Books › Crafts, Hobbies & Home › Crafts & Hobbies › Activity Books 
 # Books › Crafts, Hobbies & Home › Crafts & Hobbies › Scrapbooking 
 # Books › Self-Help › Journal Writing ↗
@@ -24,20 +24,41 @@ BOOK_TITLE="Things I’d like to tell my cat when I’m at work"
 # extract file name and color
 BOOK_CONTENT="Notes_content_6x9.pdf"
 BOOK_DESCRIPTON="""
-The Perfect Notebook for When You’d Rather Be Scooping the Litter Box Than Sitting in a Meeting.
+<h2>The Purrrfect Notebook for When You’d Rather Be Scooping the Litter Box Than Sitting in a Meeting.</h2>
 
-Let’s be honest: The hardest part of the workday isn't the commute, the deadlines, or the endless emails. It’s saying goodbye to your cat.
+<b>Let’s be honest: </b> <i>The hardest part of the workday isn't the commute, the deadlines, or the endless emails. It’s saying goodbye to your cat.</i><br>
 
-"Things I Wish I Could Say To My Cat When I'm At Work" is the ultimate lined journal for the devoted cat parent who spends 9 to 5 dreaming of toe beans, purrs, and head boops. whether you are stuck in a Zoom call or buried in spreadsheets, this notebook is your safe space to jot down notes, tasks, or just letters to your feline overlord.
+<b>"Things I Wish I Could Say To My Cat When I'm At Work" </b> is the ultimate lined journal for the devoted cat parent who spends 9 to 5 dreaming of toe beans, purrs, and head boops. whether you are stuck in a Zoom call or buried in spreadsheets, this notebook is your safe space to jot down notes, tasks, or just letters to your feline overlord.
+<br><br>
 
-This notebook is perfect for:
+<h5>This notebook is perfect for:</h5>
+<ul>
+<li>The "Crazy" Cat Person: You know who you are.</li>
 
-The "Crazy" Cat Person: You know who you are.
+<li>Office Venting: Write down all the things your cat understands but your boss doesn't.</li>
 
-Office Venting: Write down all the things your cat understands but your boss doesn't.
+<li>Lists & Notes: Use it for meeting notes, grocery lists (cat food, treats, more cat food), or daily journaling.</li>
 
-Lists & Notes: Use it for meeting notes, grocery lists (cat food, treats, more cat food), or daily journaling.
+<li>The Ultimate Gift: A hilarious Secret Santa, White Elephant, or birthday gift for coworkers and friends.</li>
+</ul>
+<h3>Separation Anxiety? There’s a Journal for That.</h3>
+<ul>
+<li><ii>"I promise I'm coming back."</i></li>
+ <li>"Please don't scratch the sofa while I'm gone."</i></li>
+<li>"The dog is lying to you."</i></li>
+</ul>
+<br>
+If you find yourself telepathically sending these messages to your cat while sitting at your desk, you need this notebook. <br>"Things I Wish I Could Say To My Cat When I'm At Work" is a fun, lined notebook designed to handle your work tasks with a side of feline humor.
+<br>
+Use this notebook to record:
+<ul>
+<li>Daily work tasks and to-do lists.</li>
 
-The Ultimate Gift: A hilarious Secret Santa, White Elephant, or birthday gift for coworkers and friends.
+<li>Reminders to buy catnip on the way home.</li>
+
+<li>Drafts of apology letters for coming home late.</li>
+
+<li>Meeting notes (that could have been an email).</li>
+</ul>
 """
-BOOK_SUBTITLE="lines, color vesion: "+COLOR
+BOOK_SUBTITLE="lines, color version: COLOR"
