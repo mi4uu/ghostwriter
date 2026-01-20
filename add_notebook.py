@@ -1,4 +1,4 @@
-ADD_NEW_URL="https://kdp.amazon.com/en_US/title-setup/paperback/new/details?series=G5MP84ANHP3&type=PRIMARY"
+ADD_NEW_URL="https://kdp.amazon.com/en_US/title-setup/paperback/new/details?type=PRIMARY"
 ID_TITLE="data-print-book-title"
 ID_SUBTITLE="data-print-book-subtitle"
 ID_AUTHOR_FIRST_NAME="data-print-book-primary-author-first-name"
@@ -62,3 +62,18 @@ Use this notebook to record:
 </ul>
 """
 BOOK_SUBTITLE="lines, color version: COLOR"
+PRICE_IN_USD=7.99
+KEYWORDS=["funny cat lover gifts for women men mom dad",
+                           "sarcastic coworker leaving gag gift for office", 
+                          "work from home desk accessories essentials wfh",
+                            "novelty blank lined notebook journal diary pad", 
+                            "crazy cat lady merchandise birthday christmas",
+                            "cute animal pet owner appreciation present"]
+
+CATEGORIES=[
+    "Crafts, Hobbies & Home>Crafts & Hobbies>Activity Books",
+    "Self-Help>Journal Writing", 
+    "Humor>Pets"
+]
+IS_ADULTONLY=False
+IS_PUBLIC_DOMAIN=False
