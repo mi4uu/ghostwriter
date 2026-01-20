@@ -62,3 +62,16 @@ Use this notebook to record:
 </ul>
 """
 BOOK_SUBTITLE="lines, color version: COLOR"
+PRICE_IN_USD=7.99
+KEYWORDS=["funny cat lover gifts for women men mom dad",
+                           "sarcastic coworker leaving gag gift for office", 
+                          "work from home desk accessories essentials wfh",
+                            "novelty blank lined notebook journal diary pad", 
+                            "crazy cat lady merchandise birthday christmas",
+                            "cute animal pet owner appreciation present"]
+
+CATEGORIES=[
+    "Crafts, Hobbies & Home>Crafts & Hobbies>Activity Books",
+    "Self-Help>Journal Writing", 
+    "Humor>Pets"
+]
