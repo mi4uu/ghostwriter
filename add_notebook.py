@@ -1,4 +1,4 @@
-ADD_NEW_URL="https://kdp.amazon.com/en_US/title-setup/paperback/new/details?series=G5MP84ANHP3&type=PRIMARY"
+ADD_NEW_URL="https://kdp.amazon.com/en_US/title-setup/paperback/new/details?type=PRIMARY"
 ID_TITLE="data-print-book-title"
 ID_SUBTITLE="data-print-book-subtitle"
 ID_AUTHOR_FIRST_NAME="data-print-book-primary-author-first-name"
@@ -75,3 +75,5 @@ CATEGORIES=[
     "Self-Help>Journal Writing", 
     "Humor>Pets"
 ]
+IS_ADULTONLY=False
+IS_PUBLIC_DOMAIN=False

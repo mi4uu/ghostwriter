@@ -76,14 +76,80 @@ def fill_book_details(driver, title, subtitle, author_first, author_last, descri
         # 2. Use JavaScript to set the value attribute directly
         driver.execute_script("arguments[0].value = 'false';", hidden_input)
 
+        # Ensure copyright/public-domain choice: click the visible checkbox if present
+        try:
+            npd = driver.find_element(By.ID, "non-public-domain")
+            try:
+                if not npd.is_selected():
+                    driver.execute_script("arguments[0].click();", npd)
+            except Exception:
+                # Some elements are not native checkboxes; try clicking via JS anyway
+                driver.execute_script("arguments[0].click();", npd)
+        except Exception as e:
+            print(f"Could not ensure non-public-domain checked: {e}")
+
+        # Ensure adult-content is set to 'No' (false). Try radios first, then fallback to hidden input.
+        try:
+            clicked_adult = False
+            # radios with value containing 'no' or 'false' (case-insensitive)
+            adult_radio_xpath = "//input[@type='radio' and (contains(translate(@value,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'no') or contains(translate(@value,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'false'))]"
+            radios = driver.find_elements(By.XPATH, adult_radio_xpath)
+            for r in radios:
+                try:
+                    if not r.is_selected():
+                        driver.execute_script("arguments[0].click();", r)
+                    clicked_adult = True
+                    break
+                except Exception:
+                    continue
+
+            if not clicked_adult:
+                # Try to locate radio inputs whose name/id mentions 'adult' and click the last/No option nearby
+                alt_xpath = "//input[@type='radio' and (contains(translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'adult') or contains(translate(@id,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'adult'))]"
+                alt = driver.find_elements(By.XPATH, alt_xpath)
+                for r in alt:
+                    try:
+                        val = (r.get_attribute('value') or '').lower()
+                        if 'no' in val or 'false' in val or val == '0':
+                            if not r.is_selected():
+                                driver.execute_script("arguments[0].click();", r)
+                            clicked_adult = True
+                            break
+                    except Exception:
+                        continue
+
+            if not clicked_adult:
+                # Fallback: set hidden input used elsewhere
+                try:
+                    hidden_input = driver.find_element(By.ID, ID_IS_ADULTONLY)
+                    driver.execute_script("arguments[0].value = 'false';", hidden_input)
+                    print('Set hidden adult-only field to false as fallback')
+                except Exception as e:
+                    print(f'Failed fallback setting adult hidden: {e}')
+            # Explicit attempt for the KDP Primary Audience radio
+            try:
+                primary_audience_xpath = "//input[@type='radio' and @name=\"data[print_book][is_adult_content]-radio\" and (@value='false' or translate(@value,'FALSE','false')='false')]"
+                pa = driver.find_element(By.XPATH, primary_audience_xpath)
+                try:
+                    if not pa.is_selected():
+                        driver.execute_script("arguments[0].click();", pa)
+                    # dispatch change event
+                    driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", pa)
+                except Exception:
+                    driver.execute_script("arguments[0].click();", pa)
+            except Exception:
+                pass
+        except Exception as e:
+            print(f"Adult radio handling failed: {e}")
 
 
 
-        # 1. Find the hidden element
-        hidden_input = driver.find_element(By.ID, ID_IS_ADULTONLY)
 
-        # 2. Use JavaScript to set the value attribute directly
-        driver.execute_script("arguments[0].value = 'false';", hidden_input)
+        # # 1. Find the hidden element
+        # hidden_input = driver.find_element(By.ID, ID_IS_ADULTONLY)
+
+        # # 2. Use JavaScript to set the value attribute directly
+        # driver.execute_script("arguments[0].value = 'false';", hidden_input)
         
         
         # Low content book
@@ -100,13 +166,53 @@ def fill_book_details(driver, title, subtitle, author_first, author_last, descri
         driver.execute_script("CKEDITOR.instances['editor1'].setData(arguments[0]);", description)
         #.send_keys(description)
         driver.save_screenshot('screenshot0.png')
-        driver.find_element(By.ID,ID_CHOOSE_CATEGORIES_BTN).click()
-        driver.save_screenshot('screenshot1.png')
 
-        # Choose categories - this might be complex, for now skip or add later
+        # Ensure adult-only selection is answered and events fired before opening categories
+        try:
+            # If a visible 'No' radio exists, click it
+            no_radio = None
+            try:
+                no_radio = driver.find_element(By.XPATH, "//input[@type='radio' and (contains(translate(@value,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'no') or contains(translate(@value,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'false'))]")
+                driver.execute_script("arguments[0].click();", no_radio)
+            except Exception:
+                # try radios whose name/id mentions 'adult' and value is 'no' or similar
+                try:
+                    alt = driver.find_element(By.XPATH, "//input[@type='radio' and (contains(translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'adult') or contains(translate(@id,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'adult')) and (contains(translate(@value,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'no') or contains(translate(@value,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'false') or @value='0')]")
+                    driver.execute_script("arguments[0].click();", alt)
+                except Exception:
+                    pass
+
+            # Also set hidden field and dispatch change to ensure page state updates
+            try:
+                hidden_adult = driver.find_element(By.ID, ID_IS_ADULTONLY)
+                driver.execute_script("arguments[0].value = 'false'; arguments[0].dispatchEvent(new Event('change'));", hidden_adult)
+            except Exception:
+                pass
+
+            # Small pause to allow UI to update and enable category button
+            time.sleep(1.0)
+        except Exception as e:
+            print(f"Warning: adult-only selection attempt failed: {e}")
+
+        # Wait until the Choose Categories button is clickable, then click
+        try:
+            WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.ID, ID_CHOOSE_CATEGORIES_BTN)))
+            driver.find_element(By.ID, ID_CHOOSE_CATEGORIES_BTN).click()
+            driver.save_screenshot('screenshot1.png')
+        except Exception as e:
+            print(f"Could not open categories modal (button not clickable): {e}")
+
+        # Choose categories (attempt automated selection)
+        try:
+            choose_categories(driver, CATEGORIES)
+        except Exception as e:
+            print(f"Category selection skipped/failed: {e}")
 
         # Save and continue
-        # driver.find_element(By.ID, f"{ID_SAVE_AND_CONTINUE_BTN}").click()
+        try:
+            driver.find_element(By.ID, f"{ID_SAVE_AND_CONTINUE_BTN}").click()
+        except Exception as e:
+            print(f"Could not click save-and-continue button: {e}")
     except Exception as e:
         print(f"Fill details failed: {e}")
         raise
@@ -126,6 +232,120 @@ def upload_cover_and_content(driver, cover_path, content_path):
 
     # Continue
     # driver.find_element(By.ID, "save-and-continue").click()
+
+
+def choose_categories(driver, categories):
+    """
+    Attempt to select categories in the KDP categories modal.
+    This uses resilient selectors: search input (if present), tree traversal, and fallback clicks.
+    """
+    try:
+        # Wait for modal to appear
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div[role='dialog'], .categories-modal, #categories-modal"))
+        )
+    except Exception:
+        # modal might already be present
+        pass
+
+    def try_click_by_xpaths(xpaths, wait=5):
+        for xp in xpaths:
+            try:
+                el = WebDriverWait(driver, wait).until(EC.element_to_be_clickable((By.XPATH, xp)))
+                driver.execute_script("arguments[0].scrollIntoView(true);", el)
+                el.click()
+                return True
+            except Exception:
+                continue
+        return False
+
+    # Try clicking any initial "Select One" controls to open category slots
+    select_one_xpaths = [
+        "//button[normalize-space(.)='Select One']",
+        "//div[normalize-space(.)='Select One']",
+        "//span[normalize-space(.)='Select One']",
+    ]
+    try_click_by_xpaths(select_one_xpaths, wait=2)
+
+    for idx, cat in enumerate(categories):
+        leaf = cat.split('>')[-1].strip()
+        # 1) Try modal search inputs (several possible attributes)
+        search_xpaths = [
+            "//div[@role='dialog']//input[@type='search']",
+            "//div[@role='dialog']//input[@type='text' and (contains(@placeholder,'Search') or contains(@aria-label,'Search'))]",
+            "//input[@type='search']",
+            "//input[contains(@placeholder,'Search') or contains(@aria-label,'Search') or contains(@class,'search') or contains(@id,'search')]",
+        ]
+
+        clicked = False
+        for sx in search_xpaths:
+            try:
+                search = driver.find_element(By.XPATH, sx)
+                search.clear()
+                search.send_keys(leaf)
+                time.sleep(1)
+                # after typing, try to click first matching label/button in modal or page
+                opt_xpaths = [
+                    f"//div[@role='dialog']//button[normalize-space(.)='{leaf}']",
+                    f"//div[@role='dialog']//label[normalize-space(.)='{leaf}']",
+                    f"//button[normalize-space(.)='{leaf}']",
+                    f"//label[normalize-space(.)='{leaf}']",
+                    f"//div[contains(normalize-space(.), '{leaf}')]",
+                ]
+                if try_click_by_xpaths(opt_xpaths, wait=3):
+                    clicked = True
+                    break
+            except Exception:
+                continue
+
+        if clicked:
+            time.sleep(0.4)
+            # After selecting this category, if more categories remain, click 'Add another category'
+            if idx < len(categories) - 1:
+                add_more_xpaths = [
+                    "//button[contains(normalize-space(.), 'Add another category') ]",
+                    "//button[contains(normalize-space(.), 'Add another') ]",
+                    "//a[contains(normalize-space(.), 'Add another category') ]",
+                ]
+                if try_click_by_xpaths(add_more_xpaths, wait=3):
+                    time.sleep(0.6)
+            continue
+
+        # 2) Fallback: try clicking by parts globally (not limited to dialog)
+        parts = [p.strip() for p in cat.split('>')]
+        for part in parts:
+            part_xpaths = [
+                f"//button[contains(normalize-space(.), '{part}')]",
+                f"//label[contains(normalize-space(.), '{part}')]",
+                f"//div[contains(normalize-space(.), '{part}')]",
+                f"//span[contains(normalize-space(.), '{part}')]",
+            ]
+            if not try_click_by_xpaths(part_xpaths, wait=3):
+                print(f"Could not click category tree part '{part}' (no matching clickable element).")
+                # Save debug artifacts to out/ for inspection
+                try:
+                    os.makedirs('out', exist_ok=True)
+                    driver.save_screenshot('out/categories_error.png')
+                    with open('out/categories_error.html', 'w', encoding='utf-8') as f:
+                        f.write(driver.page_source)
+                    print('Saved out/categories_error.png and out/categories_error.html')
+                except Exception as dump_e:
+                    print(f'Failed to save debug artifacts: {dump_e}')
+            else:
+                time.sleep(0.4)
+
+
+    # Try to confirm/close modal
+    try:
+        done_btn = driver.find_element(By.XPATH, "//div[@role='dialog']//button[contains(., 'Done') or contains(., 'Apply') or contains(., 'Save')]")
+        done_btn.click()
+    except Exception:
+        # Best-effort close: try clicking any modal primary button
+        try:
+            primary = driver.find_element(By.XPATH, "//div[@role='dialog']//button[contains(@class,'primary') or contains(@aria-label,'Done')]")
+            primary.click()
+        except Exception:
+            print("Could not find Done/Apply button to close categories modal; leaving it open.")
 
 def automate_kdp_publishing(email, password, colors):
     os.makedirs("out", exist_ok=True)
