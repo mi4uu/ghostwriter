@@ -259,16 +259,60 @@ def choose_categories(driver, categories):
                 continue
         return False
 
-    # Try clicking any initial "Select One" controls to open category slots
+    # Try clicking any initial "Select one" controls to open category slots (case-insensitive)
     select_one_xpaths = [
-        "//button[normalize-space(.)='Select One']",
-        "//div[normalize-space(.)='Select One']",
-        "//span[normalize-space(.)='Select One']",
+        "//button[normalize-space(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))='select one']",
+        "//div[normalize-space(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))='select one']",
+        "//span[normalize-space(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))='select one']",
+        "//span[contains(@class,'a-dropdown-prompt') and normalize-space(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))='select one']",
     ]
     try_click_by_xpaths(select_one_xpaths, wait=2)
 
     for idx, cat in enumerate(categories):
         leaf = cat.split('>')[-1].strip()
+        clicked = False
+
+        # If there are hierarchical native <select>s, iterate parts and set each level sequentially
+        parts = [p.strip() for p in cat.split('>')]
+        try:
+            all_parts_selected = True
+            for part in parts:
+                part_selected = False
+                selects = driver.find_elements(By.XPATH, "//div[@role='dialog']//select | //select[contains(@class,'a-native-dropdown')] | //select")
+                for sel in selects:
+                    try:
+                        options = sel.find_elements(By.TAG_NAME, 'option')
+                        for opt in options:
+                            text = (opt.text or '').strip()
+                            val = (opt.get_attribute('value') or '')
+                            if text and (text.lower() == part.lower() or part.lower() in text.lower()) or (val and ('\"key\":\"' + part + '\"') in val):
+                                # set value and dispatch change
+                                driver.execute_script("arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));", sel, val)
+                                time.sleep(0.6)
+                                # try clicking the dropdown prompt/button to ensure UI updates
+                                try:
+                                    btn = sel.find_element(By.XPATH, "./following-sibling::span//span[@data-action='a-dropdown-button' or contains(@class,'a-dropdown-prompt') or contains(., 'Select one')]")
+                                    driver.execute_script("arguments[0].click();", btn)
+                                except Exception:
+                                    # try a more global sibling search
+                                    try:
+                                        btn2 = sel.find_element(By.XPATH, "..//span[@class='a-button a-button-dropdown']")
+                                        driver.execute_script("arguments[0].click();", btn2)
+                                    except Exception:
+                                        pass
+                                part_selected = True
+                                break
+                        if part_selected:
+                            break
+                    except Exception:
+                        continue
+                if not part_selected:
+                    all_parts_selected = False
+                    break
+            if all_parts_selected:
+                clicked = True
+        except Exception:
+            pass
         # 1) Try modal search inputs (several possible attributes)
         search_xpaths = [
             "//div[@role='dialog']//input[@type='search']",
@@ -311,16 +355,39 @@ def choose_categories(driver, categories):
                     time.sleep(0.6)
             continue
 
-        # 2) Fallback: try clicking by parts globally (not limited to dialog)
+        # 2) Fallback: try clicking by parts scoped to the categories modal (prefer) then global
+        modal_prefix = "//div[contains(@class,'a-modal-scroller') and contains(@class,'a-declarative')]"
         parts = [p.strip() for p in cat.split('>')]
         for part in parts:
-            part_xpaths = [
-                f"//button[contains(normalize-space(.), '{part}')]",
-                f"//label[contains(normalize-space(.), '{part}')]",
-                f"//div[contains(normalize-space(.), '{part}')]",
-                f"//span[contains(normalize-space(.), '{part}')]",
-            ]
-            if not try_click_by_xpaths(part_xpaths, wait=3):
+            # create tolerant variants (remove commas, normalize ampersand spacing)
+            variants = [part, part.replace(',', ''), part.replace(' & ', '&'), part.replace('&', 'and'), part.replace('&', ' & ')]
+            clicked_part = False
+            for variant in variants:
+                variant = variant.strip()
+                if not variant:
+                    continue
+                part_xpaths_modal = [
+                    f"{modal_prefix}//button[contains(normalize-space(.), '{variant}')]",
+                    f"{modal_prefix}//label[contains(normalize-space(.), '{variant}')]",
+                    f"{modal_prefix}//div[contains(normalize-space(.), '{variant}')]",
+                    f"{modal_prefix}//span[contains(normalize-space(.), '{variant}')]",
+                ]
+                if try_click_by_xpaths(part_xpaths_modal, wait=2):
+                    clicked_part = True
+                    break
+
+                # fallback to global scope
+                part_xpaths_global = [
+                    f"//button[contains(normalize-space(.), '{variant}')]",
+                    f"//label[contains(normalize-space(.), '{variant}')]",
+                    f"//div[contains(normalize-space(.), '{variant}')]",
+                    f"//span[contains(normalize-space(.), '{variant}')]",
+                ]
+                if try_click_by_xpaths(part_xpaths_global, wait=2):
+                    clicked_part = True
+                    break
+
+            if not clicked_part:
                 print(f"Could not click category tree part '{part}' (no matching clickable element).")
                 # Save debug artifacts to out/ for inspection
                 try:
