@@ -8,8 +8,8 @@ ID_KEYWORDS_PREFIX="data-print-book-keywords-" # data-print-book-keywords-0 ... 
 ID_CHOOSE_CATEGORIES_BTN="categories-modal-button"
 ID_COPYRIGHTS="data-print-book-is-public-domain"
 ID_IS_ADULTONLY="data-print-book-is-adult-content-hidden"
-# Books › Crafts, Hobbies & Home › Crafts & Hobbies › Activity Books 
-# Books › Crafts, Hobbies & Home › Crafts & Hobbies › Scrapbooking 
+# Books › Crafts, Hobbies & Home › Crafts & Hobbies › Activity Books
+# Books › Crafts, Hobbies & Home › Crafts & Hobbies › Scrapbooking
 # Books › Self-Help › Journal Writing ↗
 
 
@@ -19,8 +19,8 @@ DESCRIPTON_INPUT_NAME="data[print_book][description]"
 AUTHOR_FIRST_NAME="Michal"
 AUTHOR_LAST_NAME="Lipinski"
 BOOK_TITLE="Things I’d like to tell my cat when I’m at work"
-# get book cover from out directory starting with cat_notebook_cover_ 
-# for example cat_notebook_cover_Amethyst.pdf or cat_notebook_cover_AQUA-SKY.pdf 
+# get book cover from out directory starting with cat_notebook_cover_
+# for example cat_notebook_cover_Amethyst.pdf or cat_notebook_cover_AQUA-SKY.pdf
 # extract file name and color
 BOOK_CONTENT="Notes_content_6x9.pdf"
 BOOK_DESCRIPTON="""
@@ -30,7 +30,7 @@ BOOK_DESCRIPTON="""
 
 <b>"Things I Wish I Could Say To My Cat When I'm At Work" </b> is the ultimate lined journal for the devoted cat parent who spends 9 to 5 dreaming of toe beans, purrs, and head boops. whether you are stuck in a Zoom call or buried in spreadsheets, this notebook is your safe space to jot down notes, tasks, or just letters to your feline overlord.
 <br><br>
-
+<h5>the purrrfect present for any cat lovers out there for any national or international cat day </h5>
 <h5>This notebook is perfect for:</h5>
 <ul>
 <li>The "Crazy" Cat Person: You know who you are.</li>
@@ -61,19 +61,19 @@ Use this notebook to record:
 <li>Meeting notes (that could have been an email).</li>
 </ul>
 """
-BOOK_SUBTITLE="lines, color version: COLOR"
+BOOK_SUBTITLE="version: lines, color: COLOR"
 PRICE_IN_USD=7.99
 KEYWORDS=["funny cat lover gifts for women men mom dad",
-                           "sarcastic coworker leaving gag gift for office", 
+                           "sarcastic coworker leaving gag gift for office",
                           "work from home desk accessories essentials wfh",
-                            "novelty blank lined notebook journal diary pad", 
+                            "novelty blank lined notebook journal diary pad",
                             "crazy cat lady merchandise birthday christmas",
                             "cute animal pet owner appreciation present"]
 
 CATEGORIES=[
     "Crafts, Hobbies & Home>Crafts & Hobbies>Activity Books",
-    "Self-Help>Journal Writing", 
-    "Humor>Pets"
+    "Self-Help>Journal Writing",
+    "Humor & Entertainment>Humor>Cats, Dogs & Animals"
 ]
 IS_ADULTONLY=False
 IS_PUBLIC_DOMAIN=False
