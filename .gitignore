@@ -33,5 +33,9 @@ books_published/*
 screenshot*.png
 login_error.png
 automation_log.txt
-/books_to_publish/*
-/books_published/*
+
+# Legacy code
+legacy/
+
+# Downloaded fonts (cached, re-downloadable)
+assets/fonts/*.ttf

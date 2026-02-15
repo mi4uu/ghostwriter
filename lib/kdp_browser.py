@@ -43,6 +43,20 @@ ID_COVER_SUCCESS = "data-print-book-publisher-cover-file-upload-success"
 
 # --- Driver Setup ---
 
+DEBUG_SCREENSHOT_DIR = "debug_screenshots"
+
+
+def _debug_screenshot(driver, name):
+    """Save a debug screenshot with a descriptive name."""
+    os.makedirs(DEBUG_SCREENSHOT_DIR, exist_ok=True)
+    path = os.path.join(DEBUG_SCREENSHOT_DIR, f"{name}.png")
+    try:
+        driver.save_screenshot(path)
+        print(f"    [DEBUG] Screenshot saved: {path}")
+    except Exception:
+        pass
+
+
 def setup_driver(profile_dir="./chrome_profile"):
     """
     Create a Chrome WebDriver with a persistent profile.
@@ -204,9 +218,11 @@ def fill_book_details(driver, metadata):
 
     # Save and Continue
     print("  [Page 1] Saving...")
+    _debug_screenshot(driver, "page1_before_save")
     time.sleep(1)
     wait_and_click(driver, By.ID, ID_SAVE_CONTINUE, timeout=10)
     time.sleep(3)
+    _debug_screenshot(driver, "page1_after_save")
     print("  [Page 1] Done.")
 
 
@@ -372,9 +388,11 @@ def fill_content_page(driver, metadata, book_dir):
     Fill in the KDP Content page (page 2 of 3).
 
     Uploads interior and cover PDFs, sets print options, marks not-AI.
+    After preview approval, re-marks AI and saves to move to pricing.
     """
     print("  [Page 2] Filling content page...")
     time.sleep(6)  # Wait for page to fully load
+    _debug_screenshot(driver, "page2_loaded")
 
     # Print options: try to set No Bleed and Matte
     _set_print_options(driver)
@@ -388,21 +406,67 @@ def fill_content_page(driver, metadata, book_dir):
     cover_path = os.path.join(book_dir, metadata["cover_file"])
     _upload_file(driver, ID_COVER_UPLOAD, ID_COVER_SUCCESS, cover_path, "cover")
 
+    # Wait for any upload dialogs to close
+    time.sleep(3)
+
     # Mark not AI-generated
     _mark_not_ai(driver)
+    _debug_screenshot(driver, "page2_after_uploads_and_ai")
 
-    # Save and continue
-    print("  [Page 2] Saving...")
+    # Save and continue (triggers preview generation)
+    print("  [Page 2] Saving (first pass - triggers preview)...")
     time.sleep(2)
     try:
         driver.find_element(By.ID, ID_SAVE_CONTINUE).click()
     except Exception:
         wait_and_click(driver, By.ID, ID_SAVE_CONTINUE, timeout=10)
 
+    _debug_screenshot(driver, "page2_after_first_save")
+
     # Wait for preview to generate and handle it
     _handle_preview(driver)
 
-    print("  [Page 2] Done.")
+    # After preview approval, KDP returns to content page.
+    # AI field needs to be re-answered before we can proceed to pricing.
+    print("  [Page 2] Re-marking AI after preview return...")
+    time.sleep(3)
+    _debug_screenshot(driver, "page2_after_preview_return")
+
+    # Re-mark not AI-generated (KDP often resets this after preview)
+    _mark_not_ai(driver)
+    time.sleep(1)
+    _debug_screenshot(driver, "page2_ai_remarked")
+
+    # Save and Continue to move to pricing page
+    print("  [Page 2] Saving (second pass - to pricing)...")
+    time.sleep(2)
+    try:
+        save_btn = driver.find_element(By.ID, ID_SAVE_CONTINUE)
+        safe_click(driver, save_btn)
+    except Exception:
+        wait_and_click(driver, By.ID, ID_SAVE_CONTINUE, timeout=10)
+
+    # Wait and verify we transitioned to pricing page
+    time.sleep(5)
+    _debug_screenshot(driver, "page2_after_second_save")
+
+    # Check if we actually moved to pricing
+    current_url = driver.current_url or ""
+    if "pricing" in current_url.lower() or "rights" in current_url.lower():
+        print("  [Page 2] Done - moved to pricing page.")
+    else:
+        print(f"  [Page 2] Warning: May not have transitioned to pricing. URL: {current_url}")
+        # Check for validation errors on the page
+        try:
+            errors = driver.find_elements(
+                By.XPATH,
+                "//*[contains(@class, 'a-alert-content') or contains(@class, 'error')]"
+            )
+            for err in errors[:5]:
+                if err.is_displayed() and err.text.strip():
+                    print(f"    Validation error: {err.text.strip()}")
+        except Exception:
+            pass
 
 
 def _set_print_options(driver):
@@ -463,37 +527,108 @@ def _select_upload_cover_option(driver):
 
 
 def _mark_not_ai(driver):
-    """Mark the book as not AI-generated."""
-    try:
-        # The AI section has a specific CSS path - try multiple selectors
-        selectors = [
-            "#section-generative-ai a",
-            "#section-generative-ai div.a-accordion-active a",
-            "a[contains(text(), 'None')]",
-        ]
-        for selector in selectors:
-            try:
-                if selector.startswith("a["):
-                    el = driver.find_element(By.XPATH, f"//{selector}")
-                else:
-                    el = driver.find_element(By.CSS_SELECTOR, selector)
-                safe_click(driver, el)
-                print("    Marked as not AI-generated.")
-                return
-            except Exception:
-                continue
+    """
+    Mark the book as not AI-generated.
 
-        # Fallback: the complex CSS selector from the original code
+    The AI section uses Amazon's accordion component (not standard radio buttons).
+    Structure: div[data-a-accordion-row-name="no"] > div > div[role="radio"] > a
+    """
+    print("    Selecting 'No' for AI-generated content...")
+    time.sleep(1)
+
+    # Scroll the AI section into view first
+    try:
+        ai_section = driver.find_element(By.ID, "section-generative-ai")
+        driver.execute_script(
+            "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",
+            ai_section,
+        )
+        time.sleep(1)
+    except Exception:
+        pass
+
+    # Strategy 1: Click the accordion row named "no" via its <a> tag
+    # This is the exact structure: div[data-a-accordion-row-name="no"] a.a-accordion-row
+    try:
+        no_link = driver.find_element(
+            By.CSS_SELECTOR,
+            "#section-generative-ai "
+            "div[data-a-accordion-row-name='no'] a.a-accordion-row"
+        )
+        safe_click(driver, no_link)
+        print("    Marked as not AI-generated (accordion row 'no').")
+        time.sleep(1)
+        return
+    except Exception:
+        pass
+
+    # Strategy 2: Exact CSS path to the "No" accordion link
+    try:
+        no_link = driver.find_element(
+            By.CSS_SELECTOR,
+            "#section-generative-ai "
+            "div[data-a-accordion-row-name='no'] "
+            "div.a-accordion-row-a11y a"
+        )
+        safe_click(driver, no_link)
+        print("    Marked as not AI-generated (accordion a11y link).")
+        time.sleep(1)
+        return
+    except Exception:
+        pass
+
+    # Strategy 3: The full CSS path from inspected DOM
+    try:
         noai = driver.find_element(
             By.CSS_SELECTOR,
             "#section-generative-ai > div > div.a-column.a-span10.a-span-last "
             "> div > div > div > div > span > div:nth-child(3) > div > "
-            "div.a-box.a-accordion-active > div > div > a"
+            "div:nth-child(2) > div > div > a"
         )
         safe_click(driver, noai)
-        print("    Marked as not AI-generated.")
-    except Exception as e:
-        print(f"    Warning: Could not mark not-AI: {e}")
+        print("    Marked as not AI-generated (full CSS path).")
+        time.sleep(1)
+        return
+    except Exception:
+        pass
+
+    # Strategy 4: Find the <a> inside an accordion row containing "No" text
+    try:
+        accordion_links = driver.find_elements(
+            By.CSS_SELECTOR,
+            "#section-generative-ai a.a-accordion-row"
+        )
+        for link in accordion_links:
+            if link.text.strip().lower() == "no":
+                safe_click(driver, link)
+                print("    Marked as not AI-generated (accordion link text match).")
+                time.sleep(1)
+                return
+    except Exception:
+        pass
+
+    # Strategy 5: JavaScript click on the accordion
+    try:
+        clicked = driver.execute_script("""
+            var section = document.getElementById('section-generative-ai');
+            if (!section) return false;
+            var noRow = section.querySelector('div[data-a-accordion-row-name="no"]');
+            if (!noRow) return false;
+            var link = noRow.querySelector('a.a-accordion-row');
+            if (link) { link.click(); return true; }
+            var anyLink = noRow.querySelector('a');
+            if (anyLink) { anyLink.click(); return true; }
+            return false;
+        """)
+        if clicked:
+            print("    Marked as not AI-generated (JS accordion click).")
+            time.sleep(1)
+            return
+    except Exception:
+        pass
+
+    print("    Warning: Could not select 'No' in AI section.")
+    _debug_screenshot(driver, "ai_section_failed")
 
 
 def _handle_preview(driver):
@@ -503,58 +638,114 @@ def _handle_preview(driver):
         # Wait for the page to transition - look for previewer or approve elements
         # KDP generates a preview after save - this can take 30-90 seconds
         time.sleep(10)
+        _debug_screenshot(driver, "preview_waiting")
 
-        # Try to find and click the Launch Previewer button
-        try:
-            previewer_btn = WebDriverWait(driver, 60).until(
-                EC.element_to_be_clickable((
-                    By.XPATH,
-                    "//button[contains(text(), 'Launch Previewer')] | "
-                    "//a[contains(text(), 'Launch Previewer')]"
-                ))
-            )
-            safe_click(driver, previewer_btn)
-            print("    Previewer launched, waiting...")
-            time.sleep(15)  # Give previewer time to load
+        # Check if previewer opened in a new tab
+        original_window = driver.current_window_handle
+        all_windows = driver.window_handles
 
-            # Close previewer if it opened in a modal
+        if len(all_windows) > 1:
+            # Switch to the new previewer tab
+            for w in all_windows:
+                if w != original_window:
+                    driver.switch_to.window(w)
+                    print("    Switched to previewer tab.")
+                    break
+            time.sleep(5)
+        else:
+            # Try to find and click the Launch Previewer button (same-page)
             try:
-                close_btn = driver.find_element(
-                    By.XPATH,
-                    "//button[contains(text(), 'Close')] | "
-                    "//button[@aria-label='Close']"
+                previewer_btn = WebDriverWait(driver, 60).until(
+                    EC.element_to_be_clickable((
+                        By.XPATH,
+                        "//button[contains(., 'Launch Previewer')] | "
+                        "//a[contains(., 'Launch Previewer')] | "
+                        "//span[contains(., 'Launch Previewer')]"
+                    ))
                 )
-                safe_click(driver, close_btn)
-                time.sleep(2)
+                safe_click(driver, previewer_btn)
+                print("    Previewer launched, waiting...")
+                time.sleep(10)
+
+                # Check again for new tab
+                all_windows = driver.window_handles
+                if len(all_windows) > 1:
+                    for w in all_windows:
+                        if w != original_window:
+                            driver.switch_to.window(w)
+                            print("    Switched to previewer tab.")
+                            break
+                    time.sleep(5)
+            except Exception:
+                print("    No previewer button found, continuing...")
+
+        _debug_screenshot(driver, "previewer_page")
+
+        # Try to click Approve - multiple selector strategies
+        approve_clicked = False
+        approve_selectors = [
+            # Standard button/input
+            (By.XPATH, "//button[normalize-space(.)='Approve']"),
+            (By.XPATH, "//input[@value='Approve']"),
+            (By.XPATH, "//a[normalize-space(.)='Approve']"),
+            (By.XPATH, "//span[normalize-space(.)='Approve']/.."),
+            # Contains text (broader match)
+            (By.XPATH, "//button[contains(., 'Approve')]"),
+            (By.XPATH, "//a[contains(., 'Approve')]"),
+            # KDP-specific selectors
+            (By.XPATH, "//*[contains(@class, 'approve')]"),
+            (By.XPATH, "//*[contains(@id, 'approve')]"),
+            (By.XPATH, "//*[contains(@data-action, 'approve')]"),
+        ]
+
+        for by, selector in approve_selectors:
+            try:
+                el = WebDriverWait(driver, 5).until(
+                    EC.element_to_be_clickable((by, selector))
+                )
+                safe_click(driver, el)
+                approve_clicked = True
+                print(f"    Preview approved (selector: {selector}).")
+                time.sleep(3)
+                break
+            except Exception:
+                continue
+
+        if not approve_clicked:
+            _debug_screenshot(driver, "preview_no_approve_btn")
+            print("    Warning: Could not find Approve button.")
+            # Try to dump the page source to find the button
+            try:
+                page_source = driver.page_source
+                if "Approve" in page_source:
+                    # Find context around "Approve" text
+                    idx = page_source.find("Approve")
+                    snippet = page_source[max(0, idx - 200):idx + 200]
+                    print(f"    [DEBUG] Found 'Approve' in source near: ...{snippet}...")
             except Exception:
                 pass
-        except Exception:
-            print("    No previewer button found, continuing...")
 
-        # Try to click Approve
-        try:
-            approve_btn = WebDriverWait(driver, 30).until(
-                EC.element_to_be_clickable((
-                    By.XPATH,
-                    "//button[contains(text(), 'Approve')] | "
-                    "//input[contains(@value, 'Approve')]"
-                ))
-            )
-            safe_click(driver, approve_btn)
-            print("    Preview approved.")
-            time.sleep(2)
-        except Exception:
-            print("    No approve button found, continuing...")
+        _debug_screenshot(driver, "preview_after_approve")
 
-        # Save and continue to pricing
-        try:
-            wait_and_click(driver, By.ID, ID_SAVE_CONTINUE, timeout=10)
+        # If we switched tabs, close previewer tab and return to original
+        current_windows = driver.window_handles
+        if len(current_windows) > 1 and driver.current_window_handle != original_window:
+            driver.close()
+            driver.switch_to.window(original_window)
+            print("    Closed previewer tab, back to main.")
             time.sleep(3)
+
+        # Now we should be back on the content page - click Save and Continue
+        try:
+            wait_and_click(driver, By.ID, ID_SAVE_CONTINUE, timeout=15)
+            time.sleep(5)
         except Exception:
+            # Maybe we're already on pricing page
             pass
 
     except Exception as e:
         print(f"    Warning: Preview handling issue: {e}")
+        _debug_screenshot(driver, "preview_error")
 
 
 # --- Page 3: Pricing ---
@@ -569,35 +760,74 @@ def fill_pricing_page(driver, metadata):
     """
     print("  [Page 3] Setting pricing...")
     time.sleep(5)  # Wait for page load
+    _debug_screenshot(driver, "page3_loaded")
+
+    # Verify we're actually on the pricing page
+    page_title = driver.title or ""
+    page_url = driver.current_url or ""
+    print(f"    Current URL: {page_url}")
+    print(f"    Current title: {page_title}")
+
+    # If we're not on the pricing page, something went wrong
+    if "content" in page_url and "pricing" not in page_url:
+        print("    ERROR: Still on content page, not pricing!")
+        _debug_screenshot(driver, "page3_wrong_page")
+        return False
 
     price = metadata.get("price_usd", 7.99)
 
     # Try to find and fill the US marketplace price input
+    price_set = False
     try:
-        # Look for the primary marketplace price input
+        # Broader set of selectors for the price input
         price_selectors = [
-            "//input[contains(@id, 'print-book-pricing-us') or contains(@name, 'pricing-us')]",
-            "//input[contains(@id, 'pricing') and contains(@id, 'US')]",
-            "//div[contains(@class, 'marketplace')]//input[@type='text' or @type='number']",
+            # KDP-specific IDs
+            (By.XPATH, "//input[contains(@id, 'print-book-pricing-us')]"),
+            (By.XPATH, "//input[contains(@id, 'pricing') and contains(@id, 'US')]"),
+            (By.XPATH, "//input[contains(@name, 'pricing-us')]"),
+            # By context - price input near USD or $ label
+            (By.XPATH, "//input[contains(@id, 'data-pricing')]"),
+            (By.XPATH, "//input[contains(@id, 'list-price')]"),
+            # Generic - any text input in pricing section
+            (By.CSS_SELECTOR, "#pricing-section input[type='text']"),
+            (By.CSS_SELECTOR, "input[id*='price']"),
+            (By.CSS_SELECTOR, "input[name*='price']"),
+            # Fallback: look for input near "USD" or marketplace text
+            (By.XPATH, "//td[contains(., 'Amazon.com')]//input | "
+                        "//td[contains(., 'USD')]//input | "
+                        "//tr[contains(., 'Amazon.com')]//input[@type='text']"),
         ]
 
-        price_input = None
-        for selector in price_selectors:
+        for by, selector in price_selectors:
             try:
-                price_input = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.XPATH, selector))
+                price_input = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((by, selector))
                 )
-                break
+                if price_input.is_displayed():
+                    price_input.clear()
+                    price_input.send_keys(str(price))
+                    # Tab out to trigger validation
+                    price_input.send_keys(Keys.TAB)
+                    print(f"    Price set to ${price} (selector: {selector})")
+                    price_set = True
+                    time.sleep(2)
+                    break
             except Exception:
                 continue
 
-        if price_input:
-            price_input.clear()
-            price_input.send_keys(str(price))
-            print(f"    Price set to ${price}")
-            time.sleep(1)
-        else:
+        if not price_set:
             print("    Warning: Could not find price input field")
+            _debug_screenshot(driver, "page3_price_not_found")
+            # Dump all visible inputs for debugging
+            try:
+                inputs = driver.find_elements(By.XPATH, "//input[@type='text']")
+                for inp in inputs[:10]:
+                    inp_id = inp.get_attribute("id") or "no-id"
+                    inp_name = inp.get_attribute("name") or "no-name"
+                    inp_vis = inp.is_displayed()
+                    print(f"      Input: id={inp_id}, name={inp_name}, visible={inp_vis}")
+            except Exception:
+                pass
 
     except Exception as e:
         print(f"    Warning: Pricing failed: {e}")
@@ -616,37 +846,52 @@ def fill_pricing_page(driver, metadata):
 
     # Publish
     print("  [Page 3] Publishing...")
+    _debug_screenshot(driver, "page3_before_publish")
     time.sleep(2)
 
-    try:
-        publish_btn = WebDriverWait(driver, 15).until(
-            EC.element_to_be_clickable((
-                By.XPATH,
-                "//button[contains(text(), 'Publish Your Paperback Book')] | "
-                "//input[contains(@value, 'Publish')] | "
-                "//button[contains(@id, 'publish')]"
-            ))
-        )
-        safe_click(driver, publish_btn)
-        print("  [Page 3] Publish clicked!")
-        time.sleep(5)
+    publish_clicked = False
+    publish_selectors = [
+        (By.XPATH, "//button[contains(., 'Publish Your Paperback Book')]"),
+        (By.XPATH, "//input[contains(@value, 'Publish')]"),
+        (By.XPATH, "//button[contains(@id, 'publish')]"),
+        (By.XPATH, "//a[contains(., 'Publish Your Paperback Book')]"),
+        (By.XPATH, "//span[contains(., 'Publish Your Paperback Book')]/.."),
+        (By.CSS_SELECTOR, "#publish-button, #publish-announce"),
+        (By.CSS_SELECTOR, "[data-action='publish']"),
+    ]
 
-        # Handle any confirmation dialogs
+    for by, selector in publish_selectors:
         try:
-            confirm = WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((
-                    By.XPATH,
-                    "//button[contains(text(), 'Confirm') or contains(text(), 'Yes') or contains(text(), 'OK')]"
-                ))
+            publish_btn = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((by, selector))
             )
-            safe_click(driver, confirm)
-            time.sleep(3)
+            safe_click(driver, publish_btn)
+            publish_clicked = True
+            print(f"  [Page 3] Publish clicked! (selector: {selector})")
+            time.sleep(5)
+            break
         except Exception:
-            pass  # No confirmation dialog
+            continue
 
-    except Exception as e:
-        print(f"    ERROR: Could not publish: {e}")
+    if not publish_clicked:
+        print("    ERROR: Could not find publish button")
+        _debug_screenshot(driver, "page3_publish_not_found")
         return False
 
+    # Handle any confirmation dialogs
+    try:
+        confirm = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((
+                By.XPATH,
+                "//button[contains(., 'Confirm') or contains(., 'Yes') or contains(., 'OK')] | "
+                "//input[contains(@value, 'Confirm') or contains(@value, 'OK')]"
+            ))
+        )
+        safe_click(driver, confirm)
+        time.sleep(3)
+    except Exception:
+        pass  # No confirmation dialog
+
+    _debug_screenshot(driver, "page3_after_publish")
     print("  [Page 3] Done - Book published!")
     return True
