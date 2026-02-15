@@ -8,7 +8,30 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Generated PDFs
 *.pdf
-chrome_profile
 */*.pdf
 out/
+
+# Browser session
+chrome_profile/
+
+# Credentials
+.env
+
+# OS files
+.DS_Store
+
+# Pipeline directories (contain generated files, but keep dirs via .gitkeep)
+books_to_publish/*
+!books_to_publish/.gitkeep
+books_published/*
+!books_published/.gitkeep
+
+# Screenshots / debug
+screenshot*.png
+login_error.png
+automation_log.txt
+/books_to_publish/*
+/books_published/*

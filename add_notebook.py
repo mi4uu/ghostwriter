@@ -18,7 +18,7 @@ DESCRIPTON_INPUT_NAME="data[print_book][description]"
 # data
 AUTHOR_FIRST_NAME="Michal"
 AUTHOR_LAST_NAME="Lipinski"
-BOOK_TITLE="Things I’d like to tell my cat when I’m at work"
+BOOK_TITLE="Notebook: Things I’d like to tell my cat when I’m at work"
 # get book cover from out directory starting with cat_notebook_cover_
 # for example cat_notebook_cover_Amethyst.pdf or cat_notebook_cover_AQUA-SKY.pdf
 # extract file name and color
@@ -61,7 +61,9 @@ Use this notebook to record:
 <li>Meeting notes (that could have been an email).</li>
 </ul>
 """
-BOOK_SUBTITLE="version: lines, color: COLOR"
+# BOOK_SUBTITLE="version: lines, color: COLOR"
+BOOK_SUBTITLE="version: pages with lines, color: COLOR PUSZEK EDITION"
+
 PRICE_IN_USD=7.99
 KEYWORDS=["funny cat lover gifts for women men mom dad",
                            "sarcastic coworker leaving gag gift for office",

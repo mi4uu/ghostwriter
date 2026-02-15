@@ -17,7 +17,8 @@ def type_like_a_human(element, text):
 
 def setup_driver():
     options = webdriver.ChromeOptions()
-    options.add_argument("--user-data-dir=./chrome_profile")
+    # Temporarily comment out profile to test
+    # options.add_argument("--user-data-dir=./chrome_profile")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--no-sandbox")
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
