@@ -1,9 +1,10 @@
 [project]
 name = "ghostwriter"
 version = "0.1.0"
-description = "Add your description here"
+description = "Generates notebook covers and interior pages, and automates uploading them to Amazon KDP"
 readme = "README.md"
 requires-python = ">=3.10"
+license = "AGPL-3.0-or-later"
 dependencies = [
     "fpdf>=1.7.2",
     "pillow>=12.1.0",
